@@ -1,0 +1,3 @@
+cd ../src
+
+../../parallel -j10 --resume-failed --results ../Output/sync_GNNSync --joblog ../joblog/sync_GNNSync CUDA_VISIBLE_DEVICES=0 python ./train.py --optimizer SGD   --hidden 8 --spectral_step_num 5  --eta {1} --outlier_style gamma --p {2} --N 360 --upset_coeff 1 --cycle_coeff 0 --sync_baseline row_norm_spectral --dataset {3} --lr 0.005 --all_methods GNNSync --reg_coeff 1 ::: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 ::: 0.05 0.1 0.15 ::: BAO RGGO ERO
