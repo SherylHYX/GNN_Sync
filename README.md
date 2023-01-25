@@ -81,6 +81,7 @@ bash GNNSync_sync.sh
 To reproduce the main results on general k-synchronization with k>1.
 ```
 bash GNNSync_ksync.sh
+```
 
 Note that if you are operating on CPU, you may delete the commands ``CUDA_VISIBLE_DEVICES=xx". You can also set you own number of parallel jobs, not necessarily following the j numbers in the .sh files, or use other GPU numbers.
 
