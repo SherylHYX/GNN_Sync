@@ -9,7 +9,7 @@ from torch.nn import MSELoss
 
 # internal files
 from angular_baseline import spectral_baseline, generalized_power_method
-from angular_baseline import TranSync, CEMP
+from angular_baseline import TranSync, CEMP, trimmed_averaging_synchronization
 from metrics import calculate_upsets, compErrorViaMatrices, calculate_upsets_and_confidence, cycle_inconsistency_loss
 from GNN_models import DIGRAC_Unroll_Sync
 from param_parser import parameter_parser
@@ -156,9 +156,11 @@ class Trainer(object):
                     score = CEMP(self.A, post_method='GCW')
                 elif self.args.sync_baseline == 'CEMP_MST':
                     score = CEMP(self.A, post_method='MST')
+                elif self.args.sync_baseline == 'TAS':
+                    score = trimmed_averaging_synchronization(self.A)
                 else:
                     raise NameError('Please input the correct baseline model name from:\
-                        spectral, row_norm_spectral, GPM, TranSync, CEMP_GCW, CEMP_MST instead of {}!'.format(self.args.sync_baseline))
+                        spectral, row_norm_spectral, GPM, TranSync, CEMP_GCW, CEMP_MST, TAS instead of {}!'.format(self.args.sync_baseline))
                 score_torch = torch.FloatTensor(score.reshape(score.shape[0], 1)).to(self.args.device)
 
                 upset1 = calculate_upsets(self.A_torch, score_torch)
@@ -392,11 +394,13 @@ class Trainer(object):
                 score = CEMP(self.A, post_method='GCW')
             elif model_name == 'CEMP_MST':
                 score = CEMP(self.A, post_method='MST')
+            elif model_name == 'TAS':
+                score = trimmed_averaging_synchronization(self.A)
             elif model_name == 'trivial': # trivial solution
                 score = np.ones(self.A.shape[0])
             else:
                 raise NameError('Please input the correct model name from:\
-                    spectral, row_norm_spectral, GPM, TranSync, CEMP_GCW, CEMP_MST, GNNSync, trivial, instead of {}!'.format(model_name))
+                    spectral, row_norm_spectral, GPM, TranSync, CEMP_GCW, CEMP_MST, TAS, GNNSync, trivial, instead of {}!'.format(model_name))
             if self.label is not None:
                 score2 = (-score) % (2*np.pi)
                 MSE1 = compErrorViaMatrices(score, self.label_np)

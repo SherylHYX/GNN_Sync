@@ -3,6 +3,32 @@ import numpy as np
 import torch
 import networkx as nx
 
+def tangent_trim_avg(z, Z, p):
+    n = Z.shape[0]
+    za = z
+
+    angles = np.angle(np.conjugate(za) * Z)
+    angles = np.sort(angles)
+    bool1 = angles >= angles[int(np.floor(p*n))]
+    bool2 = angles <= angles[int(np.ceil((1-p)*n))-1]
+    a = np.mean(angles[bool1 * bool2])
+    za = za * np.exp(1j * a)
+    return za
+
+def trimmed_averaging_synchronization(A, epochs=50, trimp=0):
+    A = A - A.transpose()
+    H = np.exp(1J * A.toarray())
+    n = H.shape[0] 
+    zhat = np.ones(n)
+    permuted_ord = np.random.permutation(n)
+    for _ in range(epochs):
+        for i in range(n):
+            idx = permuted_ord[i]
+            Zs = np.multiply((H[idx]).flatten(), zhat)
+            Zs = np.delete(Zs, idx)
+            zhat[idx] = tangent_trim_avg(zhat[idx], Zs, trimp)
+    return zhat % (2*np.pi)
+
 def spectral_baseline(A, row_normalization=False):
     r"""The angular synchronization model from the
     `Angular synchronization by eigenvectors and semidefinite programming" 

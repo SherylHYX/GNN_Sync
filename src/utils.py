@@ -12,7 +12,9 @@ def Outliers_Model(n: int, p: float, eta: float, style:str='gamma', measurement_
         eta : (float) Noise level, between 0 and 1.
         style: (string, optional) How to generate ground-truth angles:
             'gamma': Gamma distribution with shape 0.5 and scale 1. (default)
-            'gamma_diff': Gamma distribution with shape 0.5*(l+1) for graph l and scale 1.
+            'multi_normal0': Multivariate normal distribution with identity covariance matrix.
+            'multi_normal1': Multivariate normal distribution with covariance matrix defined in the paper.
+            'block_normal6': Multivariate normal distribution with the block-diagonal covariance matrix defined in the paper.
         measurement_graph: (string, optional) What measurement graph to set, default is 'ER', can also have 'BA', 'RGG'.
         k: (int, optional) The value k for k-synchronization data as detailed in 
             https://arxiv.org/abs/2012.14932, default 1 (normal angular synchronization).
@@ -23,7 +25,10 @@ def Outliers_Model(n: int, p: float, eta: float, style:str='gamma', measurement_
         graph_labels: (scipy.sparse matrix) groun-truth graph correspondence. 
             0 means no signal (no edge_index recorded), 1 means noise, 2 means the first graph, 3 means the second graph etc.
     """
-    if style == 'gamma':
+    if style == 'uniform':
+        scores = 2 * np.pi * np.random.rand(n, k)
+        R_noise = (np.random.rand(n, n) * 2 - 1)  * 2 * np.pi
+    elif style == 'gamma':
         scores = 2 * np.pi * np.random.gamma(shape=0.5, scale=1, size=(n, k))
         R_noise = 2 * np.pi * (np.random.rand(n, n) * 4 - 2) # 0.95 percentile for gamma(0.5, 1) is about 1.9207
     elif style == 'gamma_diff':
@@ -33,6 +38,33 @@ def Outliers_Model(n: int, p: float, eta: float, style:str='gamma', measurement_
                 scores_new = 2 * np.pi * np.random.gamma(shape=0.5*(l+1), scale=1, size=(n, 1))
                 scores = np.concatenate((scores, scores_new), axis=1)
         R_noise = 2 * np.pi * (np.random.rand(n, n) * 4 - 2) # 0.95 percentile for gamma(0.5, 1) is about 1.9207
+    elif style[:12] == 'multi_normal':
+        U = int(style[12:])
+        mean = np.pi*np.ones(n)
+        if U == 0: # iid Gaussian
+            cov = np.identity(n)
+        else:
+            a_vec = np.random.standard_normal((n, 1))
+            cov = a_vec @ a_vec.T
+            for i in range(2, U+1):
+                a_vec = np.random.standard_normal((n, 1))
+                cov += a_vec @ a_vec.T/i/i
+        scores = np.random.multivariate_normal(mean, cov, k).T
+        R_noise = (np.random.rand(n, n) * 2 - 1)  * 2 * np.pi
+    elif style[:12] == 'block_normal':
+        num_blocks = int(style[12:])
+        mean = np.pi*np.ones(n)
+        block_size = int(n/num_blocks)
+        start_ind = 0
+        cov = np.zeros((n, n))
+        for _ in range(num_blocks - 1):
+            a_vec = np.random.standard_normal((block_size, 1))
+            cov[start_ind:(start_ind+block_size), start_ind:(start_ind+block_size)] = a_vec @ a_vec.T
+            start_ind += block_size
+        a_vec = np.random.standard_normal((n - start_ind, 1))
+        cov[start_ind:n, start_ind: n] = a_vec @ a_vec.T
+        scores = np.random.multivariate_normal(mean, cov, k).T
+        R_noise = (np.random.rand(n, n) * 2 - 1)  * 2 * np.pi
 
     scores = scores % (2*np.pi)
     R_noise = R_noise % (2*np.pi)
