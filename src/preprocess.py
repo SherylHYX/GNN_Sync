@@ -5,6 +5,7 @@ import pickle as pk
 
 # third-party libraries
 import scipy.sparse as sp
+import numpy as np
 import numpy.random as rnd
 import networkx as nx
 from torch_geometric_signed_directed.data import DirectedData
@@ -66,7 +67,14 @@ def load_data(args, random_seed):
             assert nx.is_connected(G), 'Network not connected!'
             data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
                         load_only=args.load_only, k=args.k)
-
+        elif args.dataset[:8] == 'uscities':
+            A = np.load('../real_data/us_adj_obs_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
+            graph_labels = np.ones(A.shape)
+            graph_labels[A==0] = 0
+            A = sp.csr_matrix(A)
+            labels = np.load('../real_data/us_angles_gt_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
+            data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
+                        load_only=args.load_only, k=args.k)
     label = (data.y, data.graph_labels)
 
     return label, data.x, sp.csr_matrix(data.A), data.Ind_i, data.Ind_j, data.Ind_k
