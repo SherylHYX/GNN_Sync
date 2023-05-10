@@ -11,7 +11,7 @@ import networkx as nx
 from torch_geometric_signed_directed.data import DirectedData
 
 # internel
-from utils import Outliers_Model, preprocess_cycles
+from utils import Outliers_Model, preprocess_cycles, uscities_preprocess
 from angular_baseline import ksync_spectral_baseline
 
 def to_dataset_no_split(A, label, graph_labels, save_path, load_only=False, features=None, k=1):
@@ -48,6 +48,8 @@ def load_data(args, random_seed):
     default_name_base =  'trials' + str(args.num_trials)
     if args.dataset[:3] in ['ERO', 'BAO', 'RGG']:
         default_name_base += 'seed' + str(random_seed)
+    elif args.dataset[:8] == 'uscities':
+        default_name_base += 'seed' + str(random_seed)
     save_path = os.path.join(os.path.dirname(os.path.realpath(
         __file__)), '../data/'+args.dataset+default_name_base+'.pk')
     if (not args.regenerate_data) and os.path.exists(save_path):
@@ -68,14 +70,12 @@ def load_data(args, random_seed):
             data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
                         load_only=args.load_only, k=args.k)
         elif args.dataset[:8] == 'uscities':
-            A = np.load('../real_data/us_adj_obs_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
-            graph_labels = np.ones(A.shape)
-            graph_labels[A==0] = 0
+            A, labels, graph_labels = uscities_preprocess(args.eta, args.outlier_style)
+            np.save('../real_data/us_adj_obs_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', A)
             A = sp.csr_matrix(A)
-            labels = np.load('../real_data/us_angles_gt_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
+            np.save('../real_data/us_angles_gt_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', labels)
             data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
                         load_only=args.load_only, k=args.k)
     label = (data.y, data.graph_labels)
 
     return label, data.x, sp.csr_matrix(data.A), data.Ind_i, data.Ind_j, data.Ind_k
-

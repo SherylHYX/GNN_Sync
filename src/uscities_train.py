@@ -34,7 +34,7 @@ NUM_GNN_VARIANTS = len(GNN_variant_names) # number of GNN variants for each arch
 upset_choices = ['upset', 'cycle_inconsistency']
 NUM_UPSET_CHOICES = len(upset_choices)
 args = parameter_parser()
-args.dataset = 'uscities/100eta'+str(int(100*args.eta))
+args.dataset = 'uscities/100eta'+str(int(100*args.eta))+args.outlier_style
 args.num_trials = 1
 args.seeds = [10]
 whole_map = np.load('../real_data/uscities.npy')
@@ -94,7 +94,7 @@ def evaluation(logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_np, val_index,
         # plot
         angles_diff = (score-label_np) % (2*np.pi)
         score = (score - angles_diff.mean()) % (2*np.pi)
-        np.save('../uscities_pred/GNNSync_k50_thres6_100eta'+str(int(100*args.eta)), score)
+        np.save('../uscities_pred/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed), score)
         for i in range(A_torch.shape[0]):
             noisy_patch_i = whole_map[patch_indices[i]].copy()
             noisy_patch_i[:, 0] += added_noise_x[i]
@@ -105,8 +105,8 @@ def evaluation(logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_np, val_index,
             plt.scatter(rotated_coordinates[:, 0], rotated_coordinates[:, 1], s=0.5, alpha=0.8, c='blue')
         plt.scatter(whole_map[:, 0], whole_map[:, 1], s=1, c='red')
         plt.title('MSE={:.3f}'.format(MSE_full[2][0]))
-        plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+'.pdf',format='pdf')
-        plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+'.png',format='png')
+        # plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.pdf',format='pdf')
+        plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.png',format='png')
         plt.show()
     return logstr, upset_full, MSE_full
 
@@ -488,7 +488,7 @@ class Trainer(object):
             # plot
             angles_diff = (score-label_np) % (2*np.pi)
             score = (score - angles_diff.mean()) % (2*np.pi)
-            np.save('../uscities_pred/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta)), score)
+            np.save('../uscities_pred/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed), score)
             for i in range(self.A.shape[0]):
                 noisy_patch_i = whole_map[patch_indices[i]].copy()
                 noisy_patch_i[:, 0] += added_noise_x[i]
@@ -499,8 +499,8 @@ class Trainer(object):
                 plt.scatter(rotated_coordinates[:, 0], rotated_coordinates[:, 1], s=0.5, alpha=0.8, c='blue')
             plt.scatter(whole_map[:, 0], whole_map[:, 1], s=1, c='red')
             plt.title('MSE={:.3f}'.format(MSE_full[split, 2, 0]))
-            plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+'.pdf',format='pdf')
-            plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+'.png',format='png')
+            # plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.pdf',format='pdf')
+            plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.png',format='png')
             plt.show()
         return MSE_full, upset_full
 
