@@ -167,7 +167,7 @@ def get_rotation_matrix(theta):
     
     return np.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
 
-def uscities_preprocess(eta: float, style:str='gamma') -> sp.csr_matrix:
+def uscities_preprocess(eta: float, added_noise_x: np.array, added_noise_y: np.array, patch_indices: np.array, style:str='gamma') -> sp.csr_matrix:
     """Preprocess uscities data.
     Args:
         eta : (float) Noise level, between 0 and 1.
@@ -186,9 +186,6 @@ def uscities_preprocess(eta: float, style:str='gamma') -> sp.csr_matrix:
     data = np.load('../real_data/uscities.npy')
     n = data.shape[0]
     num_nodes = n
-    patch_indices = np.load('../real_data/us_patch_indices_k50_thres6_100eta'+str(int(100*eta))+'.npy')
-    added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*eta))+'.npy')
-    added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*eta))+'.npy')
     if style == 'uniform':
         angles_gt = 2 * np.pi * np.random.rand(n, 1)
     elif style == 'gamma':

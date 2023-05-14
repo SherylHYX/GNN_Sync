@@ -70,7 +70,20 @@ def load_data(args, random_seed):
             data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
                         load_only=args.load_only, k=args.k)
         elif args.dataset[:8] == 'uscities':
-            A, labels, graph_labels = uscities_preprocess(args.eta, args.outlier_style)
+            data = np.load('../real_data/uscities.npy')
+            k_num = 50
+            num_nodes = 1097
+            patch_indices = np.load('../real_data/us_patch_indices_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
+            if os.path.exists('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy'):
+                added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
+                added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
+            else:
+                added_noise_x = np.random.normal(0, args.eta*data[:, 0].std(), (num_nodes, k_num))
+                added_noise_y = np.random.normal(0, args.eta*data[:, 1].std(), (num_nodes, k_num))
+                np.save('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy', added_noise_x)
+                np.save('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy', added_noise_y)
+
+            A, labels, graph_labels = uscities_preprocess(args.eta, added_noise_x, added_noise_y, patch_indices, args.outlier_style)
             np.save('../real_data/us_adj_obs_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', A)
             A = sp.csr_matrix(A)
             np.save('../real_data/us_angles_gt_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', labels)

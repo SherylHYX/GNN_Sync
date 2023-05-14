@@ -35,12 +35,11 @@ upset_choices = ['upset', 'cycle_inconsistency']
 NUM_UPSET_CHOICES = len(upset_choices)
 args = parameter_parser()
 args.dataset = 'uscities/100eta'+str(int(100*args.eta))+args.outlier_style
-args.num_trials = 1
-args.seeds = [10]
+args.num_trials = 2
+args.seeds = [0, 10, 20, 40, 70] 
 whole_map = np.load('../real_data/uscities.npy')
+num_nodes = 1097
 patch_indices = np.load('../real_data/us_patch_indices_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
-added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
-added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
 torch.manual_seed(args.seed)
 device = args.device
 if args.cuda:
@@ -51,7 +50,7 @@ GNN_names = ['GNNSync']
 for method_name in args.all_methods:
     compare_names_all.append(method_name)
 
-def evaluation(logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_np, val_index, test_index, SavePred, save_path, split, identifier_str):
+def evaluation(random_seed, logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_np, val_index, test_index, SavePred, save_path, split, identifier_str):
     MSE_full = np.zeros((3, 1))
     MSE_full[:] = np.nan
     score_torch = score.clone()
@@ -91,22 +90,31 @@ def evaluation(logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_np, val_index,
     logstr += outstrtest + outstrval + outstrall
     logstr += 'upset:,{:.6f}, cycle inconsistency value:, {:.6f}, '.format(upset.detach().item(), cycle_inconsistency_val)
     if identifier_str == '_best':
+        added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
+        added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
         # plot
         angles_diff = (score-label_np) % (2*np.pi)
         score = (score - angles_diff.mean()) % (2*np.pi)
-        np.save('../uscities_pred/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed), score)
-        for i in range(A_torch.shape[0]):
-            noisy_patch_i = whole_map[patch_indices[i]].copy()
-            noisy_patch_i[:, 0] += added_noise_x[i]
-            noisy_patch_i[:, 1] += added_noise_y[i]
-            rotated_coordinates = np.dot(get_rotation_matrix(label_np[i]), noisy_patch_i.T).T
-            rotated_coordinates = np.dot(get_rotation_matrix(-score[i]), rotated_coordinates.T).T
-            plt.scatter(noisy_patch_i[:, 0], noisy_patch_i[:, 1], s=0.5, alpha=0.8, c='yellow')
-            plt.scatter(rotated_coordinates[:, 0], rotated_coordinates[:, 1], s=0.5, alpha=0.8, c='blue')
-        plt.scatter(whole_map[:, 0], whole_map[:, 1], s=1, c='red')
+        np.save('../uscities_pred/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split), score)
+        count_vec = np.zeros(num_nodes)
+        x_sum_vec = np.zeros(num_nodes)
+        y_sum_vec = np.zeros(num_nodes)
+        for patch_idx in range(num_nodes):
+            indices_in_patch = patch_indices[patch_idx]
+            count_vec[indices_in_patch] += 1
+            noisy_patch = whole_map[indices_in_patch].copy()
+            noisy_patch[:, 0] += added_noise_x[patch_idx]
+            noisy_patch[:, 1] += added_noise_y[patch_idx]
+            rotated_coordinates = np.dot(get_rotation_matrix(label_np[patch_idx]-score[patch_idx]), noisy_patch.T).T
+            x_sum_vec[indices_in_patch] += rotated_coordinates[:, 0]
+            y_sum_vec[indices_in_patch] += rotated_coordinates[:, 1]
+        x_vec = x_sum_vec / count_vec
+        y_vec = y_sum_vec / count_vec
+        plt.scatter(x_vec, y_vec, s=2, c='blue')
+        plt.scatter(whole_map[:, 0], whole_map[:, 1], s=2, c='red')
         plt.title('MSE={:.3f}'.format(MSE_full[2][0]))
-        # plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.pdf',format='pdf')
-        plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.png',format='png')
+        plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.pdf',format='pdf')
+        plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.png',format='png')
         plt.show()
     return logstr, upset_full, MSE_full
 
@@ -358,7 +366,7 @@ class Trainer(object):
                 logstr += 'Final results for {}:,'.format(model_name)
                 logstr += 'Best val upset loss: ,{:.3f}, test loss: ,{:.3f}, all loss: ,{:.3f},'.format(val_loss.detach().item(), test_loss.detach().item(), all_loss.detach().item())
 
-                logstr, upset_full[0, split], MSE_full[0, split] = evaluation(logstr, score_model, self.A_torch, self.Ind_i, self.Ind_j, self.Ind_k, self.label_np, val_index, test_index, self.args.SavePred, \
+                logstr, upset_full[0, split], MSE_full[0, split] = evaluation(self.random_seed, logstr, score_model, self.A_torch, self.Ind_i, self.Ind_j, self.Ind_k, self.label_np, val_index, test_index, self.args.SavePred, \
                     base_save_path, split, '_best')
                 
 
@@ -385,7 +393,7 @@ class Trainer(object):
                 logstr += 'Latest val upset loss: ,{:.3f}, test loss: ,{:.3f}, all loss: ,{:.3f},'.format(val_loss.detach().item(), test_loss.detach().item(), all_loss.detach().item())
 
 
-                logstr, upset_full_latest[0, split], MSE_full_latest[0, split] = evaluation(logstr, score_model, self.A_torch, self.Ind_i, self.Ind_j, self.Ind_k, self.label_np, val_index, test_index, self.args.SavePred, \
+                logstr, upset_full_latest[0, split], MSE_full_latest[0, split] = evaluation(self.random_seed, logstr, score_model, self.A_torch, self.Ind_i, self.Ind_j, self.Ind_k, self.label_np, val_index, test_index, self.args.SavePred, \
                     base_save_path, split, '_latest')
 
                 print(logstr)
@@ -485,22 +493,33 @@ class Trainer(object):
             with open(self.log_path + '/' + model_name + '_log'+str(split)+'.csv', 'a') as file:
                 file.write(logstr)
                 file.write('\n')
+
+            random_seed = self.random_seed
+            added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
+            added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
             # plot
             angles_diff = (score-label_np) % (2*np.pi)
             score = (score - angles_diff.mean()) % (2*np.pi)
-            np.save('../uscities_pred/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed), score)
-            for i in range(self.A.shape[0]):
-                noisy_patch_i = whole_map[patch_indices[i]].copy()
-                noisy_patch_i[:, 0] += added_noise_x[i]
-                noisy_patch_i[:, 1] += added_noise_y[i]
-                rotated_coordinates = np.dot(get_rotation_matrix(label_np[i]), noisy_patch_i.T).T
-                rotated_coordinates = np.dot(get_rotation_matrix(-score[i]), rotated_coordinates.T).T
-                plt.scatter(noisy_patch_i[:, 0], noisy_patch_i[:, 1], s=0.5, alpha=0.8, c='yellow')
-                plt.scatter(rotated_coordinates[:, 0], rotated_coordinates[:, 1], s=0.5, alpha=0.8, c='blue')
-            plt.scatter(whole_map[:, 0], whole_map[:, 1], s=1, c='red')
-            plt.title('MSE={:.3f}'.format(MSE_full[split, 2, 0]))
-            # plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.pdf',format='pdf')
-            plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.png',format='png')
+            np.save('../uscities_pred/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split), score)
+            count_vec = np.zeros(num_nodes)
+            x_sum_vec = np.zeros(num_nodes)
+            y_sum_vec = np.zeros(num_nodes)
+            for patch_idx in range(num_nodes):
+                indices_in_patch = patch_indices[patch_idx]
+                count_vec[indices_in_patch] += 1
+                noisy_patch = whole_map[indices_in_patch].copy()
+                noisy_patch[:, 0] += added_noise_x[patch_idx]
+                noisy_patch[:, 1] += added_noise_y[patch_idx]
+                rotated_coordinates = np.dot(get_rotation_matrix(label_np[patch_idx]-score[patch_idx]), noisy_patch.T).T
+                x_sum_vec[indices_in_patch] += rotated_coordinates[:, 0]
+                y_sum_vec[indices_in_patch] += rotated_coordinates[:, 1]
+            x_vec = x_sum_vec / count_vec
+            y_vec = y_sum_vec / count_vec
+            plt.scatter(x_vec, y_vec, s=2, c='blue')
+            plt.scatter(whole_map[:, 0], whole_map[:, 1], s=2, c='red')
+            plt.title('MSE={:.3f}'.format(MSE_full[split, 2][0]))
+            plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.pdf',format='pdf')
+            plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.png',format='png')
             plt.show()
         return MSE_full, upset_full
 
@@ -543,8 +562,7 @@ save_name_base = default_name_base
 
 default_name_base +=  'trials' + str(args.num_trials)
 save_name_base = default_name_base
-if args.dataset[:3] in ['ERO', 'BAO', 'RGG'] and set(args.seeds) != set([10, 20, 30, 40, 50]):
-    default_name_base += 'seeds' + '_'.join([str(value) for value in np.array(args.seeds).flatten()])
+default_name_base += 'seeds' + '_'.join([str(value) for value in np.array(args.seeds).flatten()])
 save_name = default_name_base
 
 
