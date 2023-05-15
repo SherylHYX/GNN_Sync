@@ -31,15 +31,17 @@ MSE_loss = MSELoss()
 GNN_variant_names = ['innerproduct']
 NUM_GNN_VARIANTS = len(GNN_variant_names) # number of GNN variants for each architecture
 
-upset_choices = ['upset', 'cycle_inconsistency']
+upset_choices = ['upset', 'cycle_inconsistency', 'ANE']
 NUM_UPSET_CHOICES = len(upset_choices)
 args = parameter_parser()
 args.dataset = 'uscities/100eta'+str(int(100*args.eta))+args.outlier_style
 args.num_trials = 2
-args.seeds = [0, 10, 20, 40, 70] 
+args.seeds = [2,9,11,20,40]
 whole_map = np.load('../real_data/uscities.npy')
-num_nodes = 1097
-patch_indices = np.load('../real_data/us_patch_indices_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
+num_nodes = whole_map.shape[0]
+p0 = whole_map.mean(axis=0)
+ANE_normalization_term = np.sqrt(np.sum((whole_map[:, 0]-p0[0])**2) + np.sum((whole_map[:, 1]-p0[1])**2))
+patch_indices = np.load('../real_data/us_patch_indices_k50_thres6.npy')
 torch.manual_seed(args.seed)
 device = args.device
 if args.cuda:
@@ -65,7 +67,6 @@ def evaluation(random_seed, logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_n
     new_mat = new_mat.multiply(A_torch)
     new_mat = new_mat/new_mat.sum()*A_torch.sum()
     cycle_inconsistency_val = cycle_inconsistency_loss(new_mat, Ind_i, Ind_j, Ind_k).detach().item()
-    upset_full = [upset.detach().item(), cycle_inconsistency_val]
     if SavePred:
         np.save(save_path+identifier_str+'_scores'+str(split), score.detach().cpu().numpy())
 
@@ -110,12 +111,15 @@ def evaluation(random_seed, logstr, score, A_torch, Ind_i, Ind_j, Ind_k, label_n
             y_sum_vec[indices_in_patch] += rotated_coordinates[:, 1]
         x_vec = x_sum_vec / count_vec
         y_vec = y_sum_vec / count_vec
+        ANE = (np.sqrt(np.sum((x_vec - whole_map[:, 0])**2) + np.sum((y_vec - whole_map[:, 1])**2)))/ANE_normalization_term
         plt.scatter(x_vec, y_vec, s=2, c='blue')
         plt.scatter(whole_map[:, 0], whole_map[:, 1], s=2, c='red')
-        plt.title('MSE={:.3f}'.format(MSE_full[2][0]))
         plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.pdf',format='pdf')
         plt.savefig('../uscities_plots/GNNSync_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.png',format='png')
         plt.show()
+        upset_full = [upset.detach().item(), cycle_inconsistency_val, ANE]
+    else:
+        upset_full = [upset.detach().item(), cycle_inconsistency_val, np.nan]
     return logstr, upset_full, MSE_full
 
 
@@ -459,8 +463,6 @@ class Trainer(object):
             new_mat = new_mat.multiply(self.A_torch)
             new_mat = new_mat/new_mat.sum()*self.A_torch.sum()
             cycle_inconsistency_val = cycle_inconsistency_loss(new_mat, self.Ind_i, self.Ind_j, self.Ind_k).detach().item()
-            upset_full = [upset.detach().item(), cycle_inconsistency_val]
-
             logstr += 'upset:,{:.6f}, cycle inconsistency:,{:.6f},'.format(upset.detach().item(), cycle_inconsistency_val)
 
             if self.args.SavePred:
@@ -515,12 +517,13 @@ class Trainer(object):
                 y_sum_vec[indices_in_patch] += rotated_coordinates[:, 1]
             x_vec = x_sum_vec / count_vec
             y_vec = y_sum_vec / count_vec
+            ANE = (np.sqrt(np.sum((x_vec - whole_map[:, 0])**2) + np.sum((y_vec - whole_map[:, 1])**2)))/ANE_normalization_term
             plt.scatter(x_vec, y_vec, s=2, c='blue')
             plt.scatter(whole_map[:, 0], whole_map[:, 1], s=2, c='red')
-            plt.title('MSE={:.3f}'.format(MSE_full[split, 2][0]))
             plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.pdf',format='pdf')
             plt.savefig('../uscities_plots/'+model_name+'_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'split'+str(split)+'.png',format='png')
             plt.show()
+            upset_full = [upset.detach().item(), cycle_inconsistency_val, ANE]
         return MSE_full, upset_full
 
 

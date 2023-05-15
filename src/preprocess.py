@@ -73,7 +73,7 @@ def load_data(args, random_seed):
             data = np.load('../real_data/uscities.npy')
             k_num = 50
             num_nodes = 1097
-            patch_indices = np.load('../real_data/us_patch_indices_k50_thres6_100eta'+str(int(100*args.eta))+'.npy')
+            patch_indices = np.load('../real_data/us_patch_indices_k50_thres6.npy')
             if os.path.exists('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy'):
                 added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
                 added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
