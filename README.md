@@ -41,7 +41,7 @@ mkdir Output
 
 - ./result_arrays/ stores results for different data sets. Each data set has a separate subfolder.
 
-- ./logs/ stores trained models and logs, as well as predicted clusters (optional). When you are in debug mode (see below), your logs will be stored in ./debug_logs/ folder.
+- ./logs/ stores trained models and logs. When you are in debug mode (see below), your logs will be stored in ./debug_logs/ folder.
 
 ## Options
 <p align="justify">
