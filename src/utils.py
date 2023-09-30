@@ -167,7 +167,7 @@ def get_rotation_matrix(theta):
     
     return np.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
 
-def uscities_preprocess(eta: float, added_noise_x: np.array, added_noise_y: np.array, patch_indices: np.array, style:str='gamma') -> sp.csr_matrix:
+def uscities_preprocess(eta: float, added_noise_x: np.array, added_noise_y: np.array, patch_indices: np.array, style:str='gamma', map:str="uscities") -> sp.csr_matrix:
     """Preprocess uscities data.
     Args:
         eta : (float) Noise level, between 0 and 1.
@@ -183,7 +183,7 @@ def uscities_preprocess(eta: float, added_noise_x: np.array, added_noise_y: np.a
         graph_labels: (scipy.sparse matrix) groun-truth graph correspondence. 
             0 means no signal (no edge_index recorded), 1 means noise, 2 means the first graph, 3 means the second graph etc.
     """
-    data = np.load('../real_data/uscities.npy')
+    data = np.load('../real_data/'+map+'_data.npy')
     n = data.shape[0]
     num_nodes = n
     if style == 'uniform':

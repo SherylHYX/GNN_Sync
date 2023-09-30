@@ -48,7 +48,7 @@ def load_data(args, random_seed):
     default_name_base =  'trials' + str(args.num_trials)
     if args.dataset[:3] in ['ERO', 'BAO', 'RGG']:
         default_name_base += 'seed' + str(random_seed)
-    elif args.dataset[:8] == 'uscities':
+    elif args.dataset[:4] == 'pacm' or args.dataset[:8] == 'uscities':
         default_name_base += 'seed' + str(random_seed)
     save_path = os.path.join(os.path.dirname(os.path.realpath(
         __file__)), '../data/'+args.dataset+default_name_base+'.pk')
@@ -69,24 +69,29 @@ def load_data(args, random_seed):
             assert nx.is_connected(G), 'Network not connected!'
             data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
                         load_only=args.load_only, k=args.k)
-        elif args.dataset[:8] == 'uscities':
-            data = np.load('../real_data/uscities.npy')
+        
+        if args.dataset[:4] == 'pacm' or args.dataset[:8] =='uscities':
+            if args.dataset[:4] == 'pacm':
+                dataset_str = 'pacm'
+            elif args.dataset[:8] == 'uscities':
+                dataset_str = 'uscities'
+            data = np.load('../real_data/'+dataset_str+'_data.npy')
             k_num = 50
-            num_nodes = 1097
-            patch_indices = np.load('../real_data/us_patch_indices_k50_thres6.npy')
-            if os.path.exists('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy'):
-                added_noise_x = np.load('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
-                added_noise_y = np.load('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
+            num_nodes = data.shape[0]
+            patch_indices = np.load('../real_data/'+dataset_str+'_k50_patch_indices.npy')
+            if os.path.exists('../real_data/'+dataset_str+'_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy'):
+                added_noise_x = np.load('../real_data/'+dataset_str+'_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
+                added_noise_y = np.load('../real_data/'+dataset_str+'_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy')
             else:
                 added_noise_x = np.random.normal(0, args.eta*data[:, 0].std(), (num_nodes, k_num))
                 added_noise_y = np.random.normal(0, args.eta*data[:, 1].std(), (num_nodes, k_num))
-                np.save('../real_data/us_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy', added_noise_x)
-                np.save('../real_data/us_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy', added_noise_y)
+                np.save('../real_data/'+dataset_str+'_added_noise_x_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy', added_noise_x)
+                np.save('../real_data/'+dataset_str+'_added_noise_y_k50_thres6_100eta'+str(int(100*args.eta))+'seed'+str(random_seed)+'.npy', added_noise_y)
 
-            A, labels, graph_labels = uscities_preprocess(args.eta, added_noise_x, added_noise_y, patch_indices, args.outlier_style)
-            np.save('../real_data/us_adj_obs_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', A)
+            A, labels, graph_labels = uscities_preprocess(args.eta, added_noise_x, added_noise_y, patch_indices, args.outlier_style, map=dataset_str)
+            np.save('../real_data/'+dataset_str+'_adj_obs_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', A)
             A = sp.csr_matrix(A)
-            np.save('../real_data/us_angles_gt_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', labels)
+            np.save('../real_data/'+dataset_str+'_angles_gt_k50_thres6_100eta'+str(int(100*args.eta))+args.outlier_style+'seed'+str(random_seed)+'.npy', labels)
             data = to_dataset_no_split(A, labels, graph_labels, save_path=save_path,
                         load_only=args.load_only, k=args.k)
     label = (data.y, data.graph_labels)

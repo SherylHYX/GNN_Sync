@@ -1,5 +1,7 @@
 import torch
 import numpy as np
+from texttable import Texttable
+import latextable
 
 def calculate_upsets(A: torch.FloatTensor,
                      score: torch.FloatTensor)-> torch.FloatTensor:
@@ -177,3 +179,55 @@ def ksync_calculate_upsets_and_confidence(A: torch.FloatTensor,
     ind_labels = torch.argmin(diff_all, dim=0)
     confidence = 1/(1 + diff)
     return upset, ind_labels, confidence
+
+def print_overall_performance_mean_std(title:str, results:np.array, compare_names_all:list,
+                               dataset_names:list, print_latex:bool=True, print_std:bool=True):
+    r"""Prints performance table (and possibly with latex) with mean and standard deviations.
+        The best two performing methods are highlighted in \red and \blue respectively.
+
+    Args:
+        dataset: (string) Name of the data set considered.
+        results: (np.array) Results with shape (num_trials, num_methods, num_metrics).
+        compare_names_all: (list of strings, optional) Methods names to compare.
+        metric_names: (list of strings, optional) Metrics to use (deemed better with larger values).
+        print_latex: (bool, optional) Whether to print latex table also. Default True.
+        print_std: (bool, optinoal) Whether to print standard deviations or just mean. Default False.
+    """
+    t = Texttable(max_width=120)
+    t.set_deco(Texttable.HEADER)
+    final_res_show = np.chararray(
+        [len(dataset_names)+1, len(compare_names_all)+1], itemsize=100)
+    final_res_show[0, 0] = title+'Data/Method'
+    final_res_show[0, 1:] = compare_names_all
+    final_res_show[1:, 0] = dataset_names
+    std = np.chararray(
+        [len(dataset_names), len(compare_names_all)], itemsize=20)
+    results_std = np.transpose(np.round(np.nanstd(results,0),3))
+    results_mean = np.transpose(np.round(np.nanmean(results,0),3))
+    for i in range(results_mean.shape[0]):
+        for j in range(results_mean.shape[1]):
+            final_res_show[1+i, 1+j] = '{:.3f}'.format(results_mean[i, j])
+            std[i, j] = '{:.3f}'.format(1.0*results_std[i, j])
+    if print_std:
+        plus_minus = np.chararray(
+            [len(dataset_names), len(compare_names_all)], itemsize=20)
+        plus_minus[:] = '$\pm$'
+        final_res_show[1:, 1:] = final_res_show[1:, 1:] + plus_minus + std
+    if len(compare_names_all)>1:
+        red_start = np.chararray([1], itemsize=20)
+        blue_start = np.chararray([1], itemsize=20)
+        both_end = np.chararray([1], itemsize=20)
+        red_start[:] = '\\red{'
+        blue_start[:] = '\\blue{'
+        both_end[:] = '}'
+        for i in range(results_mean.shape[0]):
+            best_values = np.sort(results_mean[i])[:2] # the smaller, the better
+            final_res_show[i+1, 1:][results_mean[i]==best_values[0]] = red_start + final_res_show[i+1, 1:][results_mean[i]==best_values[0]] + both_end
+            if best_values[0] != best_values[1]:
+                final_res_show[i+1, 1:][results_mean[i]==best_values[1]] = blue_start + final_res_show[i+1, 1:][results_mean[i]==best_values[1]] + both_end
+
+    t.add_rows(final_res_show)
+    print(t.draw())
+    if print_latex:
+        print(latextable.draw_latex(t, caption=title +
+                                    " performance.", label="table:"+title) + "\n")

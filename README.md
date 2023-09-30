@@ -41,6 +41,8 @@ mkdir Output
 
 - ./result_arrays/ stores results for different data sets. Each data set has a separate subfolder.
 
+- ./result_analysis/ stores example analysis notebooks.
+
 - ./logs/ stores trained models and logs. When you are in debug mode (see below), your logs will be stored in ./debug_logs/ folder.
 
 ## Options
@@ -81,6 +83,10 @@ bash GNNSync_sync.sh
 To reproduce the main results on general k-synchronization with k>1.
 ```
 bash GNNSync_ksync.sh
+```
+To produce bothm the main results and the ablation study results on general k-synchronization with k>1.
+```
+bash GNNSync_ksync_full_including_ablation.sh
 ```
 
 Note that if you are operating on CPU, you may delete the commands ``CUDA_VISIBLE_DEVICES=xx". You can also set you own number of parallel jobs, not necessarily following the j numbers in the .sh files, or use other GPU numbers.
