@@ -1,0 +1,5 @@
+cd ../src
+
+../../parallel -j15 --resume-failed --results ../Output/ksync_fine_tuned_baselines --joblog ../joblog/ksync_fine_tuned_baselines python ./fine_tuned_ksync_train.py --eta {1} --no-cuda --all_methods {2} --outlier_style {3} --dataset {4} --p {5} --k {6} ::: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7  ::: spectral row_norm_spectral trivial ::: gamma multi_normal0 multi_normal1 block_normal6 ::: ERO BAO RGGO ::: 0.05 0.1 0.15 ::: 2 3 4
+
+../../parallel -j15 --resume-failed --results ../Output/sync_fine_tuned_baselines --joblog ../joblog/sync_fine_tuned_baselines python ./fine_tuned_baseline_train.py --eta {1} --no-cuda --all_methods {2} --outlier_style {3} --dataset {4} --p {5} ::: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 ::: spectral row_norm_spectral GPM TranSync CEMP_GCW CEMP_MST TAS trivial ::: gamma multi_normal0 multi_normal1 block_normal6 ::: ERO BAO RGGO ::: 0.05 0.1 0.15

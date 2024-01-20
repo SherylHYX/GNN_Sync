@@ -1,5 +1,5 @@
-# GNN_Sync
-Group synchronization with graph neural networks.
+# GNN_Sync (GNNSync)
+[ICLR2024] Robust Angular Synchronization via Directed Graph Neural Networks.
 
 --------------------------------------------------------------------------------
 
@@ -84,9 +84,13 @@ To reproduce the main results on general k-synchronization with k>1.
 ```
 bash GNNSync_ksync.sh
 ```
-To produce bothm the main results and the ablation study results on general k-synchronization with k>1.
+To produce both the main results and the ablation study results on general k-synchronization with k>1.
 ```
 bash GNNSync_ksync_full_including_ablation.sh
+```
+To produce the ablation study results on fine-tuned baselines.
+```
+bash fined_tuned_baselines.sh
 ```
 
 Note that if you are operating on CPU, you may delete the commands ``CUDA_VISIBLE_DEVICES=xx". You can also set you own number of parallel jobs, not necessarily following the j numbers in the .sh files, or use other GPU numbers.
@@ -114,4 +118,20 @@ Creating a GNNSync model for BAO data with specific number of trials, hidden uni
 ```
 python ./train.py --dataset BAO --no-cuda --num_trials 5 --hidden 8 --all_methods GNNSync
 ```
+--------------------------------------------------------------------------------
+
+**Citing**
+
+
+If you find *GNNSync* useful in your research, please consider adding the following citation:
+
+```bibtex
+@article{he2023robust,
+        title={{Robust Angular Synchronization via Directed Graph Neural Networks}},
+        author={He, Yixuan and Reinert, Gesine and Wipf, David and Cucuringu, Mihai},
+        journal={arXiv preprint arXiv:2310.05842},
+        year={2023}
+        }
+```
+
 --------------------------------------------------------------------------------
